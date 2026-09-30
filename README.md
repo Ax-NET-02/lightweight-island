@@ -13,9 +13,7 @@
     <a href="https://github.com/Ax-NET-02/lightweight-island/issues/new?labels=bug&template=bug-report---.md">提交你发现的Bug</a>
     ·
     <a href="https://github.com/Ax-NET-02/lightweight-island/issues/new?labels=enhancement&template=feature-request---.md">提出你的需求/想法</a>
-</p
-
-</div>
+</p>
 
 ## 关于本App
 
@@ -36,7 +34,7 @@
 
 #### 答：体重、照片等数据都是存在您手机本地的，不用担心数据泄露哦~
 
-#### 问：主包，主包我怎么知道你软件有没有被你植入恶意木马，有没有在软件留后门
+#### 问：主包，主包我怎么知道你软件有没有被你植入恶意木马，有没有在软件留后门？
 
 #### 答：代码都在这，实在不放心，您可以自己构建编译打包，请放心食用！
 
@@ -50,21 +48,22 @@
 2. 再点击打卡，就可以愉快的记录你的体重数据了
 3. 点击记录，这里记录你所有的打卡数据
 
-### 正常用户读到这里就可以了，下面是项目介绍，以及自己构建编译打包的方法
+### 正常用户读到这里就可以了，下面是项目介绍，以及自己构建编译打包的方法。
 
-## 项目实现****
+## 项目实现
 
 ### 技术栈：
 
 - vue3 + TypeScript + Vite
-- UI组件：Vant3
+- UI组件：Vant4
+- 原生桥接：Capacitor
 
 ## 项目构建
 
 ### 环境准备：
 
-- JDK17
-- Node
+- JDK 17
+- Node.js
 - Android Studio
 
 ### 拉取项目
@@ -90,6 +89,36 @@ npm run build
 npx cap add android
 ```
 
+### 修改 Android 原生配置
+
+由于重新生成原生文件夹会丢失定制配置，在执行下一步同步前，**必须修改** Android 核心配置，否则会导致数据导出时内存溢出或无法在应用内拉起 APK 安装更新
+
+请打开 `android/app/src/main/AndroidManifest.xml` 文件，找到对应的位置插入以下两段代码：
+
+**1. 添加权限与 Queries**
+找到文件最顶部的 `<manifest ... >` 标签，在它**紧接着的下一行**（也就是 `<application>` 标签的上面），插入：
+
+```xml
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/vnd.android.package-archive" />
+        </intent>
+    </queries>
+```
+
+**2. 开启大内存模式（在 Application 标签内）**
+向下找到 `<application` 标签，在它现有的属性列表末尾（即 `>` 闭合符号的前面），添加 `android:largeHeap="true"`：
+
+```xml
+    <application
+        android:allowBackup="true"
+        ...
+        android:largeHeap="true"> 
+```
+
 ### 同步配置与资源
 
 ```powershell
@@ -104,18 +133,18 @@ npx cap open android
 
 ### 等待 Gradle 自动同步
 
-- ##### 等Android Studio下面进度条跑完
+- ##### 等 Android Studio 下面进度条跑完，提示 `Gradle sync finished`。
 
 ### 执行 APK 打包命令
 
 * 将鼠标移到顶部菜单栏，点击 **Build**（构建）
-* 在下拉菜单中，将鼠标悬停在 **Generate App Bundles or APKs**上
+* 在下拉菜单中，将鼠标悬停在 **Generate App Bundles or APKs** 上
 * 在弹出的子菜单中，点击选择 **Generate APKs**
 
 ### 打包完成
 
-- ##### 等待一段时间，右下角提示打包完成之后，点击右侧的 **locate** 蓝字，跳转到打包文件
-- ##### 完整文件路径
+- ##### 等待一段时间，右下角提示打包完成之后，点击右侧的 **locate** 蓝字，跳转到打包文件。
+- ##### 完整文件路径参考：
 
   ```powershell
   lightweight-island\android\app\build\outputs\apk\debug
@@ -139,7 +168,7 @@ npx cap open android
 
 ## 许可证
 
-##### 根据 [Apache-2.0 license](https://github.com/Ax-NET-02/lightweight-island/tree/main?tab=Apache-2.0-1-ov-file#) 许可证分发。打开 `LICENSE` 查看更多内容
+##### 根据 [Apache-2.0 license](https://github.com/Ax-NET-02/lightweight-island/tree/main?tab=Apache-2.0-1-ov-file#) 许可证分发。打开 `LICENSE` 查看更多内容。
 
 <!-- CONTACT -->
 
