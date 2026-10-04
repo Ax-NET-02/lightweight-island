@@ -128,10 +128,9 @@ import {
   type UserProfile, type RecordItem 
 } from '@/utils/storage'
 
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute} from 'vue-router';
 
 const route = useRoute();
-const router = useRouter();
 
 const formCopy = ref<UserProfile>({ ...globalProfile.value })
 const avatarFile = ref<any[]>([])
@@ -271,10 +270,17 @@ const onConfirmResetProfile = () => {
 }
 
 const checkGuideAction = () => {
-  if (route.query.showEdit === '1') {
-    showEditProfilePopup.value = true;
-    router.replace({ path: '/profile' });
-  }
+  watch(
+    () => route.query.showEdit,
+    (newVal) => {
+      if (newVal === '1') {
+        showEditProfilePopup.value = true;
+      } else {
+        showEditProfilePopup.value = false;
+      }
+    },
+    { immediate: true }
+  );
 };
 
 // 页面首次加载时检查一次

@@ -67,16 +67,13 @@
 </template>
 
 <script setup lang="ts">
-// 1. 在这里补充引入 useRouter
 import { useRoute, useRouter } from 'vue-router'
 import { ref, computed, watch } from 'vue'
 import GuideMask from '@/components/GuideMask.vue'
 import { globalProfile, getProfile, getRecords, DEFAULT_AVATAR } from '@/utils/storage'
 
 const route = useRoute()
-// 2. 在这里声明 router 变量
 const router = useRouter() 
-
 const latestWeight = ref(0)
 
 // 监听路由变化
@@ -158,7 +155,6 @@ const handleGuideStep = (stepIndex: number) => {
   else if (stepIndex === 5) {
     router.push('/records');
   }
-
 };
 
 const handleGuideFinish = () => {

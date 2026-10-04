@@ -2,9 +2,8 @@
   <div class="island-page">
     <div class="blue-zone">
       <section class="welcome top-part">
-        <!-- 可接入天气API -->
-        <span class="sub-title">当你想放弃时 想想当初为什么开始</span> 
-        <h1 class="main-title">慢慢来 也是一种前进</h1>
+        <span class="sub-title">{{ dailyQuote }}</span> 
+        <h1 class="main-title">慢慢来 也是一种进步</h1>
       </section>
     </div>
 
@@ -112,6 +111,7 @@ import { ref, computed, onMounted } from 'vue'
 import { showNotify } from '@/utils/notify'
 import { getRecords, addRecord, globalProfile } from '@/utils/storage'
 import type { RecordItem } from '@/utils/storage'
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 
 const formWeight = ref('')
 const formDiary = ref('')
@@ -211,6 +211,60 @@ const onSubmit = async (values: any) => {
   formDiary.value = ''
   fileList.value = []
 }
+
+// API接口
+const dailyQuote = ref('正在获取今日寄语...');
+
+const fetchDailyQuote = async () => {
+  const CACHE_KEY = 'cached_daily_quote';
+  const TIME_KEY = 'cached_daily_quote_time';
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+
+  const cachedText = localStorage.getItem(CACHE_KEY);
+  const cachedTime = localStorage.getItem(TIME_KEY);
+
+  if (cachedText && cachedTime && (now - Number(cachedTime) < ONE_DAY_MS)) {
+    dailyQuote.value = cachedText;
+    return;
+  }
+
+  try {
+    let text = '';
+    if (Capacitor.isNativePlatform()) {
+      const response = await CapacitorHttp.request({
+        method: 'GET',
+        url: 'https://api.yeyuannb.xyz/mryy/hq.php'
+      });
+      text = response.data;
+      
+    } else {
+      const res = await fetch('/api-quote/mryy/hq.php', {
+        method: 'GET'
+      });
+      if (!res.ok) {
+        throw new Error('API 响应异常');
+      }
+      text = await res.text();
+    }
+
+    text = text.trim();
+    text = text.replace(/[。\.]$/, '');
+
+    dailyQuote.value = text;
+  
+    localStorage.setItem(CACHE_KEY, text);
+    localStorage.setItem(TIME_KEY, now.toString());
+
+  } catch (error) {
+    console.error('获取API失败:', error);
+    dailyQuote.value = 'API接口错误, 请联系荔枝喵修复';
+  }
+};
+
+onMounted(() => {
+  fetchDailyQuote();
+});
 </script>
 
 <style scoped>
@@ -245,18 +299,35 @@ const onSubmit = async (values: any) => {
 }
 
 .sub-title {
-  color: #794f27;
-  font-size: 14px;
+  color: #2d5353; 
+  font-size: 12px;
+  background-color: rgba(255, 255, 255, 0.45); 
+  padding: 6px 14px;
+  border-radius: 20px;
+  display: inline-block;
+  letter-spacing: 1px;
+  font-weight: 500;
+  line-height: 1.6; 
 }
 
 .main-title {
-  color: #333;
-  font-size: 24px; margin: 8px 0 0 0;
+  font-size: 24px;
+  color: #2a4c4c;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin-top: 20px;
+  margin-bottom: -4px;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.4);
 }
 
 .desc-text {
-  color: #794f27;
-  margin-top: 15px; font-size: 14px;
+  font-size: 13px;
+  color: #5b8282;
+  letter-spacing: 1.5px;
+  font-weight: 400;
+  margin-top: 4px;
+  margin-bottom: 20px;
+  opacity: 0.9;
 }
 
 .stats-grid {

@@ -63,7 +63,7 @@ const steps = [
         offsetY: -2,
         offsetX: -2,
         padding: 10,
-        tooltipStyle: { top: '220px', right: '20px' }
+        tooltipStyle: { top: '260px', right: '20px' }
     },
     {
         title: '这里可以换头像喵！',
@@ -74,7 +74,7 @@ const steps = [
         offsetY: -2,
         offsetX: -2,
         padding: 10,
-        tooltipStyle: { top: '220px', right: '20px' }
+        tooltipStyle: { top: '260px', right: '20px' }
     },
     {
         title: '记得保存你的信息喵~',

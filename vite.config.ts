@@ -13,6 +13,13 @@ export default defineConfig({
   server: {
     port: 8080,
     strictPort: false,  // 端口被占用自动切换
-    host: '0.0.0.0'     // 允许局域网访问
+    host: '0.0.0.0',    // 允许局域网访问
+    proxy: {
+      '/api-quote': {
+        target: 'https://api.yeyuannb.xyz',
+        changeOrigin: true, // 允许跨域
+        rewrite: (path) => path.replace(/^\/api-quote/, '')
+      }
+    }
   }
 })
