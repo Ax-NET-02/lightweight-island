@@ -73,6 +73,10 @@ export const updateRecord = async (updated: RecordItem) => {
   return await db.records.put(updated)
 }
 
+export const deleteRecord = async (id: number) => {
+  return await db.records.delete(id)
+}
+
 // 清除所有打卡数据
 export const clearAllData = async () => {
   await db.records.clear()

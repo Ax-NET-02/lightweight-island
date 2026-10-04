@@ -25,6 +25,7 @@
         </div>
 
         <div class="card-footer">
+          <van-button size="small" icon="delete" plain type="danger" round @click="onDelete(item)">删除记录</van-button>
           <van-button size="small" icon="edit" plain type="primary" round @click="openEditModal(item)">修改记录</van-button>
         </div>
       </div>
@@ -71,9 +72,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ImagePreview } from 'vant'
+import { ImagePreview, Dialog } from 'vant'
 import { showNotify } from '@/utils/notify'
-import { getPagedRecords, getRecordsCount, updateRecord, globalProfile, DEFAULT_AVATAR } from '@/utils/storage'
+import { getPagedRecords, getRecordsCount, updateRecord, deleteRecord, globalProfile, DEFAULT_AVATAR } from '@/utils/storage'
 import type { RecordItem } from '@/utils/storage'
 
 const totalCount = ref(0)
@@ -99,6 +100,28 @@ const onPageChange = async () => {
 
 const previewImage = (url: string) => {
   ImagePreview([url])
+}
+
+const onDelete = (item: RecordItem) => {
+  Dialog.confirm({
+    title: '荔枝喵提醒您',
+    message: '确定要删除这条打卡记录吗？ \n此操作无法恢复哦！',
+    confirmButtonText: '确认删除',
+    cancelButtonText: '取消',
+  })
+    .then(async () => {
+      await deleteRecord(item.id!)
+      
+      if (currentPageData.value.length === 1 && currentPage.value > 1) {
+        currentPage.value -= 1
+      }
+      
+      await loadCurrentPageData()
+      showNotify('记录已删除', 'success')
+    })
+    .catch(() => {
+      showNotify('已取消删除', 'primary')
+    })
 }
 
 const showEditPopup = ref(false)
@@ -248,6 +271,7 @@ const onSaveEdit = async (values: any) => {
 .card-footer {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
   border-top: 1px solid #f5f5f5;
   padding-top: 12px;
 }
@@ -292,5 +316,5 @@ const onSaveEdit = async (values: any) => {
 
 .popup-actions {
   margin: 24px 16px;
-  }
+}
 </style>
