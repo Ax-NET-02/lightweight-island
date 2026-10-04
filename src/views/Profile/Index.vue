@@ -11,7 +11,7 @@
             height="4.5rem"
             fit="cover"
             :src="globalProfile.avatar || DEFAULT_AVATAR"
-            class="user-avatar"
+            class="user-avatar, guide-step-3"
           />
         </van-uploader>
         
@@ -22,7 +22,7 @@
         </div>
         
         <div class="edit-arrow-zone" @click="openEditProfile">
-          <van-icon name="arrow" color="rgba(255,255,255,0.8)" size="20" />
+          <van-icon name="arrow" color="rgba(255,255,255,0.8)" size="20" class="guide-step-2"/>
         </div>
       </div>
     </div>
@@ -103,7 +103,7 @@
             <van-field v-model="formCopy.initialWeight" name="initialWeight" label="初始体重(kg)" type="number" placeholder="例如 70" />
             <van-field v-model="formCopy.goalWeight" name="goalWeight" label="目标体重(kg)" type="number" placeholder="例如 60" />
           </van-cell-group>
-          <div class="btn-container">
+          <div class="btn-container, guide-step-4">
             <van-button round block type="primary" native-type="submit" class="save-btn">保存个人资料</van-button>
           </div>
         </van-form>
@@ -127,6 +127,11 @@ import {
   DEFAULT_AVATAR, globalProfile, getProfile, saveProfileData, getRecords, clearAllData, resetProfileData, 
   type UserProfile, type RecordItem 
 } from '@/utils/storage'
+
+import { useRoute, useRouter } from 'vue-router';
+
+const route = useRoute();
+const router = useRouter();
 
 const formCopy = ref<UserProfile>({ ...globalProfile.value })
 const avatarFile = ref<any[]>([])
@@ -264,6 +269,22 @@ const onConfirmResetProfile = () => {
     .then(async () => { await resetProfileData(); avatarFile.value = []; showNotify('已重置', 'danger') })
     .catch(() => {})
 }
+
+const checkGuideAction = () => {
+  if (route.query.showEdit === '1') {
+    showEditProfilePopup.value = true;
+    router.replace({ path: '/profile' });
+  }
+};
+
+// 页面首次加载时检查一次
+onMounted(() => {
+  checkGuideAction();
+});
+
+watch(() => route.query.showEdit, () => {
+  checkGuideAction();
+});
 </script>
 
 <style scoped>

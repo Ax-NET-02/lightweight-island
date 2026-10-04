@@ -3,7 +3,7 @@
     <div class="blue-zone">
       <section class="welcome top-part">
         <!-- 可接入天气API -->
-        <span class="sub-title">今日岛屿天气晴朗</span> 
+        <span class="sub-title">当你想放弃时 想想当初为什么开始</span> 
         <h1 class="main-title">慢慢来 也是一种前进</h1>
       </section>
     </div>
@@ -96,7 +96,7 @@
             </div>
             
             <div class="form-actions">
-              <van-button round block type="primary" native-type="submit" class="submit-btn">
+              <van-button round block type="primary" native-type="submit" class="submit-btn, guide-step-5">
                 完成打卡
               </van-button>
             </div>

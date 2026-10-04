@@ -55,18 +55,28 @@
     <!-- 底部导航栏 -->
     <van-tabbar route active-color="#1989fa" inactive-color="#999">
       <van-tabbar-item replace to="/check-in" icon="edit">打卡</van-tabbar-item>
-      <van-tabbar-item replace to="/records" icon="orders-o">记录</van-tabbar-item>
-      <van-tabbar-item replace to="/profile" icon="user-o">我的</van-tabbar-item>
+      <van-tabbar-item replace to="/records" icon="orders-o" class="guide-step-6">记录</van-tabbar-item>
+      <van-tabbar-item replace to="/profile" icon="user-o" class="guide-step-1">我的</van-tabbar-item>
     </van-tabbar>
   </div>
+
+  <GuideMask 
+      @step-change="handleGuideStep" 
+      @finish="handleGuideFinish" 
+    />
 </template>
 
 <script setup lang="ts">
+// 1. 在这里补充引入 useRouter
+import { useRoute, useRouter } from 'vue-router'
 import { ref, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import GuideMask from '@/components/GuideMask.vue'
 import { globalProfile, getProfile, getRecords, DEFAULT_AVATAR } from '@/utils/storage'
 
 const route = useRoute()
+// 2. 在这里声明 router 变量
+const router = useRouter() 
+
 const latestWeight = ref(0)
 
 // 监听路由变化
@@ -130,6 +140,30 @@ const bmiData = computed(() => {
   if (bmiValue >= 24 && bmiValue <= 27.9) return { value: bmiValue, text: '偏胖', color: '#ff976a' }
   return { value: bmiValue, text: '肥胖', color: '#ee0a24' }
 })
+
+// 处理引导页跳转
+const handleGuideStep = (stepIndex: number) => {
+  if (stepIndex === 1) {
+    router.push('/profile');
+  } 
+  else if (stepIndex === 2) {
+    router.push('/profile');
+  } 
+  else if (stepIndex === 3) {
+    router.push({ path: '/profile', query: { showEdit: '1' } });
+  }
+  else if (stepIndex === 4) {
+    router.push('/check-in');
+  }
+  else if (stepIndex === 5) {
+    router.push('/records');
+  }
+
+};
+
+const handleGuideFinish = () => {
+  router.push('/check-in');
+};
 </script>
 
 <style scoped>
