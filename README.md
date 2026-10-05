@@ -42,7 +42,7 @@
 
 ## 食用方法
 
-#### 在[官方网站](https://)下载APK安装包或者在该项目[Releases](https://github.com/Ax-NET-02/lightweight-island/releases)下载APK安装包，授权安装即可
+#### 在[官方网站](https://xiaodian021.kicp.fun)下载APK安装包或者在该项目[Releases](https://github.com/Ax-NET-02/lightweight-island/releases)下载APK安装包，授权安装即可
 
 ##### 更新荔枝喵食用引导教程[第一次使用软件会有引导]，下面是文字食用方法
 1. 打开软件后，先点击「我的」，点击头像可以修改默认头像，点击头像右边的「>」按钮，修改个人信息
