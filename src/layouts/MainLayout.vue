@@ -38,7 +38,10 @@
     </header>
 
     <!-- 中间跳转区域 -->
-    <main class="app-main">
+    <main
+      class="app-main"
+      :class="{ 'check-in-main': route.path === '/check-in' || route.path === '/' }"
+    >
       <router-view />
     </main>
 
@@ -138,7 +141,7 @@ const handleGuideFinish = () => {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #f7f8fa;
+  background-color: #fff;
 }
 
 .app-header {
@@ -225,7 +228,18 @@ const handleGuideFinish = () => {
 
 .app-main {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding-bottom: 50px; 
+  padding-bottom: 50px;
+  box-sizing: border-box;
+  background-color: #fff;
+}
+
+.app-main:has(> *) {
+  background-color: #fff;
+}
+
+.check-in-main {
+  background-color: #e8f4f3;
 }
 </style>

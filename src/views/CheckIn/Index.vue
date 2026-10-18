@@ -1,130 +1,100 @@
 <template>
-  <div class="island-page">
-    <div class="blue-zone">
-      <section class="welcome top-part">
-        <span class="sub-title">{{ dailyQuote }}</span> 
-        <h1 class="main-title">慢慢来 也是一种进步</h1>
-      </section>
-    </div>
+  <div class="white-zone">
+    <!-- 统计卡片 -->
+    <section class="stats-grid">
+      <div class="stat-card yellow-card">
+        <span>今日体重</span>
+        <strong>{{ latestWeight }} <i>{{ getUnitLabel() }}</i></strong>
+        <small>{{ records.length > 0 ? '已完成今日记录' : '等待今日打卡' }}</small>
+      </div>
+      <div class="stat-card teal-card">
+        <span>累计变化</span>
+        <strong>{{ totalChange }} <i>{{ getUnitLabel() }}</i></strong>
+        <small>从起始记录计算</small>
+      </div>
 
-    <div class="white-zone">
-      <section class="welcome bottom-part">
-        <p class="desc-text">记录身体的每一点轻盈变化吧</p>
-      </section>
-
-      <!-- 统计卡片 -->
-      <section class="stats-grid">
-        <div class="stat-card yellow-card">
-          <span>今日体重</span>
-          <strong>{{ latestWeight }} <i>{{ getUnitLabel() }}</i></strong>
-          <small>{{ records.length > 0 ? '已完成今日记录' : '等待今日打卡' }}</small>
+      <div class="stat-card sub-stat-card">
+        <div class="sub-card-top">
+          <span>身体指数 (BMI)</span>
+          <em class="status-badge" :class="bmiInfo.badgeClass">{{ bmiInfo.label }}</em>
         </div>
-        <div class="stat-card teal-card">
-          <span>累计变化</span>
-          <strong>{{ totalChange }} <i>{{ getUnitLabel() }}</i></strong>
-          <small>从起始记录计算</small>
-        </div>
+        <strong :style="{ color: bmiInfo.color }">{{ bmiInfo.value }}</strong>
+        <small>{{ bmiInfo.desc }}</small>
+      </div>
 
-        <div class="stat-card sub-stat-card">
-          <div class="sub-card-top">
-            <span>身体指数 (BMI)</span>
-            <em class="status-badge" :class="bmiInfo.badgeClass">{{ bmiInfo.label }}</em>
+      <div class="stat-card sub-stat-card">
+        <div class="sub-card-top">
+          <span>近期动态</span>
+          <em v-if="recentDiffInfo.hasData" class="status-badge" :class="recentDiffInfo.badgeClass">
+            {{ recentDiffInfo.tag }}
+          </em>
+        </div>
+        <strong :style="{ color: recentDiffInfo.color }">
+          {{ recentDiffInfo.value }} <i v-if="recentDiffInfo.hasData">{{ getUnitLabel() }}</i>
+        </strong>
+        <small>{{ recentDiffInfo.desc }}</small>
+      </div>
+    </section>
+
+    <!-- 变化折线图 -->
+    <section class="island-section">
+      <h2 class="section-title">变化趋势</h2>
+      <div class="trend-card">
+        <div class="trend-top">
+          <span>最近 {{ records.length }} 次记录</span>
+          <div class="goal-tag" v-if="goalProgress > 0">
+            目标 {{ goalProgress }}%
           </div>
-          <strong :style="{ color: bmiInfo.color }">{{ bmiInfo.value }}</strong>
-          <small>{{ bmiInfo.desc }}</small>
         </div>
 
-        <div class="stat-card sub-stat-card">
-          <div class="sub-card-top">
-            <span>近期动态</span>
-            <em v-if="recentDiffInfo.hasData" class="status-badge" :class="recentDiffInfo.badgeClass">
-              {{ recentDiffInfo.tag }}
-            </em>
+        <div v-if="records.length" class="chart-wrap">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="体重趋势图">
+            <polygon :points="`0,100 ${chartPoints} 100,100`" fill="rgba(255,255,255,.25)" />
+            <polyline :points="chartPoints" fill="none" stroke="#fff" stroke-width="2"
+              vector-effect="non-scaling-stroke" />
+          </svg>
+          <div class="chart-labels">
+            <span>{{ records[records.length - 1]?.date.slice(5) }}</span>
+            <span>{{ records[0]?.date.slice(5) }}</span>
           </div>
-          <strong :style="{ color: recentDiffInfo.color }">
-            {{ recentDiffInfo.value }} <i v-if="recentDiffInfo.hasData">{{ getUnitLabel() }}</i>
-          </strong>
-          <small>{{ recentDiffInfo.desc }}</small>
         </div>
-      </section>
+        <div v-else class="empty-state">开始打卡后，变化曲线会出现。</div>
+      </div>
+    </section>
 
-      <!-- 变化折线图 -->
-      <section class="island-section">
-        <h2 class="section-title">变化趋势</h2>
-        <div class="trend-card">
-          <div class="trend-top">
-            <span>最近 {{ records.length }} 次记录</span>
-            <div class="goal-tag" v-if="goalProgress > 0">
-              目标 {{ goalProgress }}%
-            </div>
-          </div>
-          
-          <div v-if="records.length" class="chart-wrap">
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="体重趋势图">
-              <polygon :points="`0,100 ${chartPoints} 100,100`" fill="rgba(255,255,255,.25)"/>
-              <polyline :points="chartPoints" fill="none" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"/>
-            </svg>
-            <div class="chart-labels">
-              <span>{{ records[records.length - 1]?.date.slice(5) }}</span>
-              <span>{{ records[0]?.date.slice(5) }}</span>
-            </div>
-          </div>
-          <div v-else class="empty-state">开始打卡后，变化曲线会出现。</div>
-        </div>
-      </section>
+    <!-- 每日打卡表单 -->
+    <section class="island-section">
+      <h2 class="section-title">每日打卡</h2>
 
-      <!-- 每日打卡表单 -->
-      <section class="island-section">
-        <h2 class="section-title">每日打卡</h2>
-        
-        <div class="checkin-card">
-          <p class="form-hint">把今天的努力收进小岛日记</p>
-          
-          <van-form @submit="onSubmit">
-            <van-cell-group inset class="custom-cell-group">
-              <van-field v-model="formDate" name="date" label="日期" readonly />
-              <van-field
-                v-model="formWeight"
-                name="weight"
-                :label="`体重(${getUnitLabel()})`"
-                type="number"
-                :placeholder="globalProfile.unit === 'jin' ? '例如 117.2' : '例如 58.6'"
-                :rules="[{ required: true, message: '请填写体重' }]"
-              />
-              <van-field
-                v-model="formDiary"
-                name="diary"
-                label="小日记"
-                type="textarea"
-                rows="2"
-                autosize
-                placeholder="每天对自己说的话，备注..."
-              />
-            </van-cell-group>
-            
-            <div class="photo-row">
-              <div class="photo-upload-box">
-                <van-uploader 
-                  v-model="fileList" 
-                  :max-count="1" 
-                  accept="image/*"
-                  capture="camera"
-                  upload-text="拍照打卡"
-                />
-                <div class="photo-tip">仅保存在本机</div>
-              </div>
-              <p class="photo-slogan">留下一张照片<br />让改变看得见</p>
+      <div class="checkin-card">
+        <p class="form-hint">把今天的努力收进小岛日记</p>
+
+        <van-form @submit="onSubmit">
+          <van-cell-group inset class="custom-cell-group">
+            <van-field v-model="formDate" name="date" label="日期" readonly />
+            <van-field v-model="formWeight" name="weight" :label="`体重(${getUnitLabel()})`" type="number"
+              :placeholder="globalProfile.unit === 'jin' ? '例如 117.2' : '例如 58.6'"
+              :rules="[{ required: true, message: '请填写体重' }]" />
+            <van-field v-model="formDiary" name="diary" label="小日记" type="textarea" rows="2" autosize
+              placeholder="每天对自己说的话，备注..." />
+          </van-cell-group>
+
+          <div class="photo-row">
+            <div class="photo-upload-box">
+              <van-uploader v-model="fileList" :max-count="1" accept="image/*" capture="camera" upload-text="拍照打卡" />
+              <div class="photo-tip">仅保存在本机</div>
             </div>
-            
-            <div class="form-actions">
-              <van-button round block type="primary" native-type="submit" class="submit-btn, guide-step-5">
-                完成打卡
-              </van-button>
-            </div>
-          </van-form>
-        </div>
-      </section>
-    </div>
+            <p class="photo-slogan">留下一张照片<br />让改变看得见</p>
+          </div>
+
+          <div class="form-actions">
+            <van-button round block type="primary" native-type="submit" class="submit-btn, guide-step-5">
+              完成打卡
+            </van-button>
+          </div>
+        </van-form>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -133,11 +103,10 @@ import { ref, computed, onMounted } from 'vue'
 import { showNotify } from '@/utils/notify'
 import { getRecords, addRecord, globalProfile, getUnitLabel, formatWeight, toKgWeight } from '@/utils/storage'
 import type { RecordItem } from '@/utils/storage'
-import { Capacitor, CapacitorHttp } from '@capacitor/core';
 
 const formWeight = ref('')
 const formDiary = ref('')
-const fileList = ref<any[]>([]) 
+const fileList = ref<any[]>([])
 
 const getTodayDate = () => {
   const date = new Date()
@@ -150,7 +119,7 @@ const formDate = ref(getTodayDate())
 
 const records = ref<RecordItem[]>([])
 
-onMounted(async() => {
+onMounted(async () => {
   records.value = await getRecords()
 })
 
@@ -260,13 +229,13 @@ const recentDiffInfo = computed(() => {
 
 // 计算 SVG 折线图坐标
 const chartPoints = computed(() => {
-  const values = [...records.value].reverse() 
+  const values = [...records.value].reverse()
   if (!values.length) return ''
-  
+
   const weights = values.map(item => item.weight)
-  const min = Math.min(...weights) - 0.3 
+  const min = Math.min(...weights) - 0.3
   const max = Math.max(...weights) + 0.3
-  
+
   return values.map((item, index) => {
     const x = values.length === 1 ? 50 : (index / (values.length - 1)) * 100
     const y = max === min ? 50 : 92 - ((item.weight - min) / (max - min)) * 76
@@ -278,11 +247,11 @@ const chartPoints = computed(() => {
 const goalProgress = computed(() => {
   const initial = Number(globalProfile.value.initialWeight) || 0
   const goal = Number(globalProfile.value.goalWeight) || 0
-  
+
   if (!initial || !goal || goal >= initial) return 0
 
-  const latestWeight = records.value.length > 0 
-    ? Number(records.value[0].weight) 
+  const latestWeight = records.value.length > 0
+    ? Number(records.value[0].weight)
     : initial
 
   const lostWeight = initial - latestWeight
@@ -291,7 +260,7 @@ const goalProgress = computed(() => {
   if (lostWeight <= 0) return 0
 
   let percentage = Math.floor((lostWeight / targetWeightLoss) * 100)
-  
+
   if (percentage > 100) percentage = 100
 
   return percentage
@@ -317,73 +286,14 @@ const onSubmit = async (values: any) => {
   records.value = await getRecords()
 
   showNotify('打卡成功，继续保持！', 'success')
-  
+
   formWeight.value = ''
   formDiary.value = ''
   fileList.value = []
 }
-
-// API接口
-const dailyQuote = ref('正在获取今日寄语...');
-
-const fetchDailyQuote = async () => {
-  const CACHE_KEY = 'cached_daily_quote';
-  const TIME_KEY = 'cached_daily_quote_time';
-  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-  const now = Date.now();
-
-  const cachedText = localStorage.getItem(CACHE_KEY);
-  const cachedTime = localStorage.getItem(TIME_KEY);
-
-  if (cachedText && cachedTime && (now - Number(cachedTime) < ONE_DAY_MS)) {
-    dailyQuote.value = cachedText;
-    return;
-  }
-
-  try {
-    let text = '';
-    if (Capacitor.isNativePlatform()) {
-      const response = await CapacitorHttp.request({
-        method: 'GET',
-        url: 'https://api.yeyuannb.xyz/mryy/hq.php'
-      });
-      text = response.data;
-      
-    } else {
-      const res = await fetch('/api-quote/mryy/hq.php', {
-        method: 'GET'
-      });
-      if (!res.ok) {
-        throw new Error('API 响应异常');
-      }
-      text = await res.text();
-    }
-
-    text = text.trim();
-    text = text.replace(/[。\.]$/, '');
-
-    dailyQuote.value = text;
-  
-    localStorage.setItem(CACHE_KEY, text);
-    localStorage.setItem(TIME_KEY, now.toString());
-
-  } catch (error) {
-    console.error('获取API失败:', error);
-    dailyQuote.value = 'API接口错误, 请联系荔枝喵修复';
-  }
-};
-
-onMounted(() => {
-  fetchDailyQuote();
-});
 </script>
 
 <style scoped>
-.island-page { 
-  background: #e8f4f3;
-  min-height: 100%;
-}
-
 .blue-zone {
   background-color: #a7dedf;
   padding: 20px 20px 25px 20px;
@@ -405,20 +315,21 @@ onMounted(() => {
 .welcome.top-part {
   margin-bottom: 0;
 }
+
 .welcome.bottom-part {
   margin-top: 0;
 }
 
 .sub-title {
-  color: #2d5353; 
+  color: #2d5353;
   font-size: 12px;
-  background-color: rgba(255, 255, 255, 0.45); 
+  background-color: rgba(255, 255, 255, 0.45);
   padding: 6px 14px;
   border-radius: 20px;
   display: inline-block;
   letter-spacing: 1px;
   font-weight: 500;
-  line-height: 1.6; 
+  line-height: 1.6;
 }
 
 .main-title {
@@ -454,7 +365,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   min-width: 0;
 }
 
@@ -559,7 +470,7 @@ onMounted(() => {
   background: #fff;
   border-radius: 16px;
   padding: 16px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
 .form-hint {
@@ -628,7 +539,7 @@ onMounted(() => {
 .trend-top {
   display: flex;
   justify-content: space-between;
-  align-items: center; 
+  align-items: center;
   font-size: 14px;
   opacity: 0.9;
   margin-bottom: 16px;
@@ -663,11 +574,11 @@ onMounted(() => {
 }
 
 .goal-tag {
-  background-color: #fffbe8; 
-  color: #ff976a; 
+  background-color: #fffbe8;
+  color: #ff976a;
   font-size: 12px;
   font-weight: bold;
   padding: 4px 12px;
-  border-radius: 20px; 
+  border-radius: 20px;
 }
 </style>
