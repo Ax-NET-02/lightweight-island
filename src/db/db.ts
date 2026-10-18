@@ -20,6 +20,7 @@ export interface UserProfile {
   height: string
   initialWeight: string
   goalWeight: string
+  unit?: 'kg' | 'jin'
 }
 
 export class IslandDatabase extends Dexie {

@@ -43,6 +43,33 @@
       </van-grid>
     </div>
 
+    <!-- 偏好设置 -->
+    <div class="section-title">偏好设置</div>
+    <div class="action-card">
+      <div class="action-item" style="cursor: default;">
+        <div class="action-left">
+          <van-icon name="balance-list-o" size="20" color="#7bc63d" />
+          <span>重量单位切换</span>
+        </div>
+        <div class="unit-switch">
+          <span
+            class="unit-btn"
+            :class="{ active: globalProfile.unit !== 'jin' }"
+            @click="onSwitchUnit('kg')"
+          >
+            切换 kg
+          </span>
+          <span
+            class="unit-btn"
+            :class="{ active: globalProfile.unit === 'jin' }"
+            @click="onSwitchUnit('jin')"
+          >
+            切换 斤
+          </span>
+        </div>
+      </div>
+    </div>
+
     <!-- 数据备份与迁移 -->
     <div class="section-title">数据备份与迁移</div>
     <div class="action-card">
@@ -100,8 +127,8 @@
             <van-field v-model="formCopy.signature" name="signature" label="个性签名" placeholder="输入一句话鼓励自己" />
             <van-field v-model="formCopy.age" name="age" label="年龄" type="digit" placeholder="请输入年龄" />
             <van-field v-model="formCopy.height" name="height" label="身高(cm)" type="number" placeholder="例如 175" />
-            <van-field v-model="formCopy.initialWeight" name="initialWeight" label="初始体重(kg)" type="number" placeholder="例如 70" />
-            <van-field v-model="formCopy.goalWeight" name="goalWeight" label="目标体重(kg)" type="number" placeholder="例如 60" />
+            <van-field v-model="formCopy.initialWeight" name="initialWeight" :label="`初始体重(${getUnitLabel()})`" type="number" :placeholder="globalProfile.unit === 'jin' ? '例如 140' : '例如 70'" />
+            <van-field v-model="formCopy.goalWeight" name="goalWeight" :label="`目标体重(${getUnitLabel()})`" type="number" :placeholder="globalProfile.unit === 'jin' ? '例如 120' : '例如 60'" />
           </van-cell-group>
           <div class="btn-container, guide-step-4">
             <van-button round block type="primary" native-type="submit" class="save-btn">保存个人资料</van-button>
@@ -124,11 +151,12 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 
 import { 
-  DEFAULT_AVATAR, globalProfile, getProfile, saveProfileData, getRecords, clearAllData, resetProfileData, 
+  DEFAULT_AVATAR, globalProfile, getProfile, saveProfileData, getRecords, clearAllData, resetProfileData,
+  getUnitLabel, formatWeight, toKgWeight,
   type UserProfile, type RecordItem 
 } from '@/utils/storage'
 
-import { useRoute} from 'vue-router';
+import { useRoute } from 'vue-router';
 
 const route = useRoute();
 
@@ -138,19 +166,41 @@ const userRecords = ref<RecordItem[]>([])
 
 const showEditProfilePopup = ref(false)
 
+const syncFormCopyFromGlobal = () => {
+  const isJin = globalProfile.value.unit === 'jin'
+  formCopy.value = {
+    ...globalProfile.value,
+    initialWeight: globalProfile.value.initialWeight
+      ? (isJin ? formatWeight(globalProfile.value.initialWeight) : String(globalProfile.value.initialWeight))
+      : '',
+    goalWeight: globalProfile.value.goalWeight
+      ? (isJin ? formatWeight(globalProfile.value.goalWeight) : String(globalProfile.value.goalWeight))
+      : ''
+  }
+}
+
 onMounted(async () => {
   await getProfile()
-  formCopy.value = { ...globalProfile.value }
+  syncFormCopyFromGlobal()
   userRecords.value = await getRecords()
 })
 
-watch(() => globalProfile.value, (newVal) => {
-  formCopy.value = { ...newVal }
+watch(() => globalProfile.value, () => {
+  syncFormCopyFromGlobal()
 }, { deep: true })
 
 const openEditProfile = () => {
-  formCopy.value = { ...globalProfile.value }
+  syncFormCopyFromGlobal()
   showEditProfilePopup.value = true
+}
+
+const onSwitchUnit = async (targetUnit: 'kg' | 'jin') => {
+  if ((globalProfile.value.unit || 'kg') === targetUnit) return
+  await saveProfileData({
+    ...globalProfile.value,
+    unit: targetUnit
+  })
+  showNotify(`已切换为 ${targetUnit === 'jin' ? '斤' : 'kg'}`, 'success')
 }
 
 const weightLostVal = computed(() => {
@@ -176,13 +226,14 @@ const accountLevel = computed(() => {
 const achievements = computed(() => {
   const days = userRecords.value.length
   const lost = weightLostVal.value
+  const isJin = globalProfile.value.unit === 'jin'
   return [
     { id: 1, title: '初次登岛', desc: '完成第1次打卡', icon: 'flag-o', color: '#1989fa', unlocked: days >= 1 },
-    { id: 2, title: '初见成效', desc: '累计减重2kg', icon: 'smile-o', color: '#07c160', unlocked: lost >= 2 },
+    { id: 2, title: '初见成效', desc: `累计减重${isJin ? '4斤' : '2kg'}`, icon: 'smile-o', color: '#07c160', unlocked: lost >= 2 },
     { id: 3, title: '坚持不懈', desc: '累计打卡7次', icon: 'fire-o', color: '#ff976a', unlocked: days >= 7 },
-    { id: 4, title: '渐入佳境', desc: '累计减重5kg', icon: 'star-o', color: '#7232dd', unlocked: lost >= 5 },
+    { id: 4, title: '渐入佳境', desc: `累计减重${isJin ? '10斤' : '5kg'}`, icon: 'star-o', color: '#7232dd', unlocked: lost >= 5 },
     { id: 5, title: '毅力王者', desc: '累计打卡21次', icon: 'diamond-o', color: '#ee0a24', unlocked: days >= 21 },
-    { id: 6, title: '完美蜕变', desc: '累计减重10kg', icon: 'award-o', color: '#ffd21e', unlocked: lost >= 10 },
+    { id: 6, title: '完美蜕变', desc: `累计减重${isJin ? '20斤' : '10kg'}`, icon: 'award-o', color: '#ffd21e', unlocked: lost >= 10 },
   ]
 })
 
@@ -196,7 +247,12 @@ const onAvatarChange = async (file: any) => {
 }
 
 const onSaveProfile = async () => {
-  await saveProfileData(formCopy.value)
+  const dataToSave: UserProfile = {
+    ...formCopy.value,
+    initialWeight: formCopy.value.initialWeight ? String(toKgWeight(formCopy.value.initialWeight)) : '',
+    goalWeight: formCopy.value.goalWeight ? String(toKgWeight(formCopy.value.goalWeight)) : ''
+  }
+  await saveProfileData(dataToSave)
   showNotify('个人资料保存成功！', 'success')
   showEditProfilePopup.value = false
 }
@@ -269,28 +325,18 @@ const onConfirmResetProfile = () => {
     .catch(() => {})
 }
 
-const checkGuideAction = () => {
-  watch(
-    () => route.query.showEdit,
-    (newVal) => {
-      if (newVal === '1') {
-        showEditProfilePopup.value = true;
-      } else {
-        showEditProfilePopup.value = false;
-      }
-    },
-    { immediate: true }
-  );
-};
-
-// 页面首次加载时检查一次
-onMounted(() => {
-  checkGuideAction();
-});
-
-watch(() => route.query.showEdit, () => {
-  checkGuideAction();
-});
+// 页面首次加载及路由参数变化时检查
+watch(
+  () => route.query.showEdit,
+  (newVal) => {
+    if (newVal === '1') {
+      showEditProfilePopup.value = true;
+    } else {
+      showEditProfilePopup.value = false;
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
@@ -316,6 +362,10 @@ watch(() => route.query.showEdit, () => {
   position: relative;
 }
 
+.avatar-uploader {
+  flex-shrink: 0;
+}
+
 .user-avatar {
   border: 3px solid #fff;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -324,12 +374,16 @@ watch(() => route.query.showEdit, () => {
 .info-text {
   margin-left: 16px;
   flex: 1;
+  min-width: 0;
 }
 
 .user-name {
   margin: 0 0 4px 0;
   font-size: 20px;
   color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .user-sign {
@@ -337,6 +391,12 @@ watch(() => route.query.showEdit, () => {
   font-size: 13px;
   opacity: 0.9;
   line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-all;
 }
 
 .level-tag { 
@@ -358,6 +418,7 @@ watch(() => route.query.showEdit, () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .edit-arrow-zone:active {
@@ -368,6 +429,29 @@ watch(() => route.query.showEdit, () => {
   font-size: 14px;
   color: #969799;
   margin: 20px 8px 8px 8px;
+}
+
+.unit-switch {
+  display: inline-flex;
+  background-color: #f2f3f5;
+  border-radius: 16px;
+  padding: 2px;
+}
+
+.unit-btn {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 14px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.unit-btn.active {
+  background-color: #7bc63d;
+  color: #fff;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(123, 198, 61, 0.3);
 }
 
 .popup-content {

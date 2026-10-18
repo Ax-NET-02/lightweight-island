@@ -10,6 +10,7 @@
           width="3rem"
           height="3rem"
           fit="cover"
+          class="header-avatar"
           :src="globalProfile.avatar || DEFAULT_AVATAR"
         />
         <div class="user-info">
@@ -32,17 +33,6 @@
             <span class="status-dot"></span>
             <span class="status-text">{{ globalProfile.signature || '开启全新的轻盈之旅' }}</span>
           </div>
-        </div>
-      </div>
-
-      <!-- BMI展示 -->
-      <div class="header-right" v-if="bmiData.value > 0">
-        <div class="bmi-box">
-          <div class="bmi-header">
-            <span class="bmi-label">BMI</span>
-            <span class="bmi-value" :style="{ color: bmiData.color }">{{ bmiData.value }}</span>
-          </div>
-          <van-tag plain round :style="{ color: bmiData.color }">{{ bmiData.text }}</van-tag>
         </div>
       </div>
     </header>
@@ -119,25 +109,6 @@ const accountLevel = computed(() => {
   return `Lv.0 迷失的旅人`
 })
 
-// 计算BMI值
-const bmiData = computed(() => {
-  const heightCm = Number(globalProfile.value.height)
-  const weightKg = latestWeight.value
-
-  if (!heightCm || !weightKg) {
-    return { value: 0, text: '未知', color: '#999' }
-  }
-
-  const heightM = heightCm / 100
-  const bmi = weightKg / (heightM * heightM)
-  const bmiValue = Number(bmi.toFixed(1)) 
-
-  if (bmiValue < 18.5) return { value: bmiValue, text: '偏瘦', color: '#1989fa' }
-  if (bmiValue >= 18.5 && bmiValue <= 23.9) return { value: bmiValue, text: '正常', color: '#07c160' }
-  if (bmiValue >= 24 && bmiValue <= 27.9) return { value: bmiValue, text: '偏胖', color: '#ff976a' }
-  return { value: bmiValue, text: '肥胖', color: '#ee0a24' }
-})
-
 // 处理引导页跳转
 const handleGuideStep = (stepIndex: number) => {
   if (stepIndex === 1) {
@@ -183,6 +154,11 @@ const handleGuideFinish = () => {
 .header-left {
   display: flex;
   align-items: center;
+  width: 100%;
+}
+
+.header-avatar {
+  flex-shrink: 0;
 }
 
 .user-info {
@@ -190,20 +166,22 @@ const handleGuideFinish = () => {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  flex: 1;
+  min-width: 0;
 }
 
 .name-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 2px;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 .nickname {
   font-size: 18px;
   font-weight: bold;
   color: #333;
-  max-width: 100px; 
+  max-width: 160px; 
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -211,62 +189,38 @@ const handleGuideFinish = () => {
 
 .header-level-tag {
   font-size: 10px !important;
-  padding: 2px 6px !important;
+  padding: 2px 8px !important;
   font-weight: normal;
   box-shadow: 0 2px 6px rgba(123, 198, 61, 0.3);
+  flex-shrink: 0;
 }
 
 .status {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   margin-top: 2px;
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   background-color: #07c160;
   border-radius: 50%;
-  margin-right: 4px;
+  margin-right: 6px;
+  margin-top: 5px;
+  flex-shrink: 0;
 }
 
 .status-text {
   font-size: 12px;
   color: #999;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-}
-
-.bmi-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: #f7f8fa;
-  padding: 6px 12px;
-  border-radius: 12px;
-  border: 1px solid #ebedf0;
-}
-
-.bmi-header {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  margin-bottom: 4px;
-}
-
-.bmi-label {
-  font-size: 10px;
-  color: #969799;
-  font-weight: bold;
-}
-
-.bmi-value {
-  font-size: 18px;
-  font-weight: 900;
-  font-family: monospace; 
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-all;
 }
 
 .app-main {

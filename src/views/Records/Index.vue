@@ -18,7 +18,7 @@
         </div>
 
         <div class="card-body">
-          <div class="record-weight">体重：<strong>{{ item.weight }}</strong> kg</div>
+          <div class="record-weight">体重：<strong>{{ formatWeight(item.weight) }}</strong> {{ getUnitLabel() }}</div>
           <p class="record-diary">{{ item.diary }}</p>
           
           <van-image class="record-image" fit="cover" radius="8px" :src="item.imageUrl" @click="previewImage(item.imageUrl)" />
@@ -53,7 +53,7 @@
         <van-form @submit="onSaveEdit">
           <van-cell-group inset>
             <van-field v-model="editForm.date" name="date" label="日期" type="date" />
-            <van-field v-model="editForm.weight" name="weight" label="体重(kg)" type="number" :rules="[{ required: true, message: '请填写体重' }]" />
+            <van-field v-model="editForm.weight" name="weight" :label="`体重(${getUnitLabel()})`" type="number" :rules="[{ required: true, message: '请填写体重' }]" />
             <van-field v-model="editForm.diary" name="diary" label="小日记" type="textarea" rows="3" autosize />
           </van-cell-group>
           <div class="edit-photo-section">
@@ -74,7 +74,7 @@
 import { ref, onMounted } from 'vue'
 import { ImagePreview, Dialog } from 'vant'
 import { showNotify } from '@/utils/notify'
-import { getPagedRecords, getRecordsCount, updateRecord, deleteRecord, globalProfile, DEFAULT_AVATAR } from '@/utils/storage'
+import { getPagedRecords, getRecordsCount, updateRecord, deleteRecord, globalProfile, DEFAULT_AVATAR, getUnitLabel, formatWeight, toKgWeight } from '@/utils/storage'
 import type { RecordItem } from '@/utils/storage'
 
 const totalCount = ref(0)
@@ -137,7 +137,7 @@ const openEditModal = (item: RecordItem) => {
   editForm.value = {
     id: item.id || 0,
     date: item.date,
-    weight: item.weight,
+    weight: Number(formatWeight(item.weight)),
     diary: item.diary,
     fileList: [{ url: item.imageUrl, isImage: true }]
   }
@@ -162,7 +162,7 @@ const onSaveEdit = async (values: any) => {
     id: editForm.value.id,
     userName: globalProfile.value.name || '未命名用户',
     date: values.date,
-    weight: Number(values.weight),
+    weight: toKgWeight(values.weight),
     diary: values.diary,
     imageUrl: newImageUrl
   }

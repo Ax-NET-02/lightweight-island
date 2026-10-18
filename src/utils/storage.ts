@@ -13,14 +13,18 @@ export const globalProfile = ref<UserProfile>({
   height: '',
   initialWeight: '',
   goalWeight: '',
-  avatar: ''
+  avatar: '',
+  unit: 'kg'
 })
 
 // 初始化并获取个人资料
 export const getProfile = async () => {
   const profile = await db.profile.get(1)
   if (profile) {
-    globalProfile.value = profile
+    globalProfile.value = {
+      ...profile,
+      unit: profile.unit || 'kg'
+    }
   } else {
     await db.profile.put({ ...globalProfile.value, id: 1 })
   }
@@ -43,15 +47,41 @@ export const resetProfileData = async () => {
     height: '',
     initialWeight: '',
     goalWeight: '',
-    avatar: ''
+    avatar: '',
+    unit: 'kg'
   }
   await db.profile.put({ ...blankProfile, id: 1 })
   globalProfile.value = blankProfile
 }
 
+export const getUnitLabel = () => {
+  return globalProfile.value.unit === 'jin' ? '斤' : 'kg'
+}
+
+export const formatWeight = (weightKg: number | string | undefined | null): string => {
+  if (weightKg === undefined || weightKg === null || weightKg === '' || isNaN(Number(weightKg))) {
+    return '——'
+  }
+  const num = Number(weightKg)
+  const val = globalProfile.value.unit === 'jin' ? num * 2 : num
+  return Number(val.toFixed(1)).toString()
+}
+
+export const toKgWeight = (inputWeight: number | string): number => {
+  const num = Number(inputWeight)
+  if (isNaN(num)) return 0
+  const kgVal = globalProfile.value.unit === 'jin' ? num / 2 : num
+  return Number(kgVal.toFixed(2))
+}
+
 export const getRecords = async (): Promise<RecordItem[]> => {
-  const records = await db.records.orderBy('date').reverse().toArray()
-  return records
+  const records = await db.records.toArray()
+  return records.sort((a, b) => newTypeDateSort(b.date, a.date))
+}
+
+// 辅助排序小函数
+const newTypeDateSort = (dateA: string, dateB: string) => {
+  return new Date(dateA).getTime() - new Date(dateB).getTime()
 }
 
 // 打卡记录处理

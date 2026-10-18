@@ -16,13 +16,35 @@
       <section class="stats-grid">
         <div class="stat-card yellow-card">
           <span>今日体重</span>
-          <strong>{{ latestWeight }} <i>kg</i></strong>
+          <strong>{{ latestWeight }} <i>{{ getUnitLabel() }}</i></strong>
           <small>{{ records.length > 0 ? '已完成今日记录' : '等待今日打卡' }}</small>
         </div>
         <div class="stat-card teal-card">
           <span>累计变化</span>
-          <strong>{{ totalChange }} <i>kg</i></strong>
+          <strong>{{ totalChange }} <i>{{ getUnitLabel() }}</i></strong>
           <small>从起始记录计算</small>
+        </div>
+
+        <div class="stat-card sub-stat-card">
+          <div class="sub-card-top">
+            <span>身体指数 (BMI)</span>
+            <em class="status-badge" :class="bmiInfo.badgeClass">{{ bmiInfo.label }}</em>
+          </div>
+          <strong :style="{ color: bmiInfo.color }">{{ bmiInfo.value }}</strong>
+          <small>{{ bmiInfo.desc }}</small>
+        </div>
+
+        <div class="stat-card sub-stat-card">
+          <div class="sub-card-top">
+            <span>近期动态</span>
+            <em v-if="recentDiffInfo.hasData" class="status-badge" :class="recentDiffInfo.badgeClass">
+              {{ recentDiffInfo.tag }}
+            </em>
+          </div>
+          <strong :style="{ color: recentDiffInfo.color }">
+            {{ recentDiffInfo.value }} <i v-if="recentDiffInfo.hasData">{{ getUnitLabel() }}</i>
+          </strong>
+          <small>{{ recentDiffInfo.desc }}</small>
         </div>
       </section>
 
@@ -64,9 +86,9 @@
               <van-field
                 v-model="formWeight"
                 name="weight"
-                label="体重(kg)"
+                :label="`体重(${getUnitLabel()})`"
                 type="number"
-                placeholder="例如 58.6"
+                :placeholder="globalProfile.unit === 'jin' ? '例如 117.2' : '例如 58.6'"
                 :rules="[{ required: true, message: '请填写体重' }]"
               />
               <van-field
@@ -109,7 +131,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { showNotify } from '@/utils/notify'
-import { getRecords, addRecord, globalProfile } from '@/utils/storage'
+import { getRecords, addRecord, globalProfile, getUnitLabel, formatWeight, toKgWeight } from '@/utils/storage'
 import type { RecordItem } from '@/utils/storage'
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 
@@ -135,7 +157,7 @@ onMounted(async() => {
 // 计算今日最新体重
 const latestWeight = computed(() => {
   if (records.value.length === 0) return '—'
-  return records.value[0].weight
+  return formatWeight(records.value[0].weight)
 })
 
 // 计算累计体重变化
@@ -143,8 +165,97 @@ const totalChange = computed(() => {
   if (records.value.length < 2) return '0.0'
   const latest = records.value[0].weight
   const initial = records.value[records.value.length - 1].weight
-  const diff = latest - initial
-  return (diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1))
+  const diffKg = latest - initial
+  const displayDiff = Number(formatWeight(Math.abs(diffKg))).toFixed(1)
+  if (diffKg > 0) return `+ ${displayDiff}`
+  if (diffKg < 0) return `- ${displayDiff}`
+  return '0.0'
+})
+
+// 2.1 计算 BMI 指数
+const bmiInfo = computed(() => {
+  const heightCm = Number(globalProfile.value.height)
+  const currentWeightKg = records.value.length > 0
+    ? Number(records.value[0].weight)
+    : Number(globalProfile.value.initialWeight)
+
+  if (!heightCm || !currentWeightKg) {
+    return {
+      value: '—',
+      label: '待完善',
+      color: '#999999',
+      badgeClass: 'badge-gray',
+      desc: '请在个人中心设置身高'
+    }
+  }
+
+  const heightM = heightCm / 100
+  const bmi = Number((currentWeightKg / (heightM * heightM)).toFixed(1))
+
+  if (bmi < 18.5) {
+    return { value: bmi.toFixed(1), label: '偏瘦', color: '#3b82f6', badgeClass: 'badge-blue', desc: '适当补充营养哦' }
+  }
+  if (bmi < 24.0) {
+    return { value: bmi.toFixed(1), label: '标准', color: '#10b981', badgeClass: 'badge-green', desc: '身材保持得很棒' }
+  }
+  if (bmi < 28.0) {
+    return { value: bmi.toFixed(1), label: '偏胖', color: '#f97316', badgeClass: 'badge-orange', desc: '坚持运动会更轻盈' }
+  }
+  return { value: bmi.toFixed(1), label: '肥胖', color: '#ef4444', badgeClass: 'badge-red', desc: '慢慢来，健康最重要' }
+})
+
+// 2.2 计算相比 N 日前体重变化
+const recentDiffInfo = computed(() => {
+  if (records.value.length < 2) {
+    return {
+      hasData: false,
+      value: '—',
+      tag: '暂无对比',
+      color: '#999999',
+      badgeClass: 'badge-gray',
+      desc: '再打卡一次即可生成对比'
+    }
+  }
+
+  const latest = records.value[0]
+  const prev = records.value[1]
+
+  const d1 = new Date(latest.date).getTime()
+  const d2 = new Date(prev.date).getTime()
+  const days = Math.max(1, Math.round(Math.abs(d1 - d2) / (1000 * 60 * 60 * 24)))
+
+  const diffKg = Number((latest.weight - prev.weight).toFixed(2))
+  const absDisplay = formatWeight(Math.abs(diffKg))
+  const unit = getUnitLabel()
+
+  if (diffKg < 0) {
+    return {
+      hasData: true,
+      value: `- ${absDisplay}`,
+      tag: '↓ 下降',
+      color: '#10b981',
+      badgeClass: 'badge-green',
+      desc: `相比${days}日前下降${absDisplay}${unit}`
+    }
+  } else if (diffKg > 0) {
+    return {
+      hasData: true,
+      value: `+ ${absDisplay}`,
+      tag: '↑ 上升',
+      color: '#f97316',
+      badgeClass: 'badge-orange',
+      desc: `相比${days}日前上升${absDisplay}${unit}`
+    }
+  } else {
+    return {
+      hasData: true,
+      value: '0.0',
+      tag: '持平',
+      color: '#64748b',
+      badgeClass: 'badge-gray',
+      desc: `相比${days}日前体重持平`
+    }
+  }
 })
 
 // 计算 SVG 折线图坐标
@@ -198,7 +309,7 @@ const onSubmit = async (values: any) => {
   await addRecord({
     userName: globalProfile.value.name || '未命名用户',
     date: values.date,
-    weight: Number(values.weight),
+    weight: toKgWeight(values.weight),
     diary: values.diary || '今天完成了打卡！',
     imageUrl: imageUrl
   })
@@ -332,15 +443,19 @@ onMounted(() => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px; margin-top: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
 }
 
-.stat-card { padding: 16px;
+.stat-card {
+  padding: 15px;
   border-radius: 16px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  min-width: 0;
 }
 
 .stat-card span {
@@ -352,17 +467,24 @@ onMounted(() => {
   font-size: 22px;
   margin: 8px 0;
   color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-card strong i {
   font-size: 12px;
   font-style: normal;
   color: #666;
+  font-weight: normal;
 }
 
 .stat-card small {
   font-size: 11px;
   color: #794f27;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .yellow-card {
@@ -371,6 +493,60 @@ onMounted(() => {
 
 .teal-card {
   background-color: #82d5bb;
+}
+
+.sub-stat-card {
+  background-color: #ffffff;
+  border: 1px solid rgba(130, 213, 187, 0.35);
+}
+
+.sub-stat-card small {
+  color: #6b7280;
+}
+
+.sub-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-badge {
+  font-style: normal;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-green {
+  color: #10b981;
+  background-color: #ecfdf5;
+  border: 1px solid #a7f3d0;
+}
+
+.badge-orange {
+  color: #f97316;
+  background-color: #fff7ed;
+  border: 1px solid #fed7aa;
+}
+
+.badge-blue {
+  color: #3b82f6;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.badge-red {
+  color: #ef4444;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.badge-gray {
+  color: #64748b;
+  background-color: #f1f5f9;
 }
 
 .section-title {
