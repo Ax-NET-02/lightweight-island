@@ -174,6 +174,7 @@
 </template>
 
 <script setup lang="ts">
+import { Media } from '@capacitor-community/media'
 import { ref, computed, onMounted, watch } from 'vue'
 import { Dialog } from 'vant'
 import { showNotify } from '@/utils/notify'
@@ -400,16 +401,18 @@ const loadImg = (src: string): Promise<HTMLImageElement> => {
 }
 
 const generateImageReport = async () => {
-  showNotify('正在生成专属报告...', 'primary')
-  userRecords.value = await getRecords()
-
-  // 创建画布
   const canvas = document.createElement('canvas')
   const width = 750
-  const height = 1000
-  canvas.width = width
-  canvas.height = height
+  const height = 1060
+  const scale = 3
+  canvas.width = width * scale
+  canvas.height = height * scale
+
   const ctx = canvas.getContext('2d')!
+  ctx.scale(scale, scale)
+
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
 
   //绘制背景
   const bgGrad = ctx.createLinearGradient(0, 0, width, height)
@@ -568,11 +571,20 @@ const shareOrDownloadReport = async () => {
   try {
     if (Capacitor.isNativePlatform()) {
       const base64Data = reportImgUrl.value.split(',')[1]
+
       const savedFile = await Filesystem.writeFile({
         path: fileName,
         data: base64Data,
         directory: Directory.Cache
       })
+
+      try {
+        await Media.savePhoto({ path: savedFile.uri })
+        showNotify('已成功保存到手机系统相册！', 'success')
+      } catch (e) {
+        showNotify('相册保存未授权，可通过下方分享保存', 'primary')
+      }
+
       await Share.share({
         title: '我的轻盈小岛报告',
         text: '来看看我的蜕变记录吧！',
@@ -586,7 +598,7 @@ const shareOrDownloadReport = async () => {
       showNotify('报告图片已下载！', 'success')
     }
   } catch (err) {
-    showNotify('分享已取消或未完成', 'primary')
+    // 取消分享时静默处理
   }
 }
 </script>
