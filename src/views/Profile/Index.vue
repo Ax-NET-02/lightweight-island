@@ -70,6 +70,18 @@
       </div>
     </div>
 
+    <!-- 生成图片报告 -->
+    <div class="section-title">成长印记</div>
+    <div class="action-card">
+      <div class="action-item" @click="generateImageReport">
+        <div class="action-left">
+          <van-icon name="photo-o" size="20" color="#ff976a" />
+          <span>生成图片报告</span>
+        </div>
+        <van-icon name="arrow" color="#969799" />
+      </div>
+    </div>
+
     <!-- 数据备份与迁移 -->
     <div class="section-title">数据备份与迁移</div>
     <div class="action-card">
@@ -136,7 +148,28 @@
         </van-form>
       </div>
     </van-popup>
-
+    <!-- 图片报告预览弹窗 -->
+    <van-popup
+      v-model:show="showReportPopup"
+      round
+      closeable
+      :style="{
+        width: '70%', 
+        background: '#f7f8fa',
+        padding: '20px 16px 16px 16px',
+        '--van-popup-close-icon-color': '#333333',
+        '--van-popup-close-icon-size': '26px'
+        }"
+    >
+      <div class="report-modal-box">
+        <img v-if="reportImgUrl" :src="reportImgUrl" class="report-preview-img" alt="轻盈报告" />
+        <div class="report-actions">
+          <van-button round block type="primary" icon="share-o" class="save-btn" @click="shareOrDownloadReport">
+            分享 / 保存图片报告
+          </van-button>
+        </div>
+      </div>
+    </van-popup>
   </div>
 </template>
 
@@ -337,6 +370,225 @@ watch(
   },
   { immediate: true }
 );
+
+// 图片生成逻辑
+const showReportPopup = ref(false)
+const reportImgUrl = ref('')
+
+// 绘制圆角矩形辅助函数
+const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, fillStyle: string | CanvasGradient) => {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.arcTo(x + w, y, x + w, y + h, r)
+  ctx.arcTo(x + w, y + h, x, y + h, r)
+  ctx.arcTo(x, y + h, x, y, r)
+  ctx.arcTo(x, y, x + w, y, r)
+  ctx.closePath()
+  ctx.fillStyle = fillStyle
+  ctx.fill()
+}
+
+// 加载图片辅助函数
+const loadImg = (src: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => resolve(img)
+    img.onerror = (e) => reject(e)
+    img.src = src
+  })
+}
+
+const generateImageReport = async () => {
+  showNotify('正在生成专属报告...', 'primary')
+  userRecords.value = await getRecords()
+
+  // 创建画布
+  const canvas = document.createElement('canvas')
+  const width = 750
+  const height = 1000
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')!
+
+  //绘制背景
+  const bgGrad = ctx.createLinearGradient(0, 0, width, height)
+  bgGrad.addColorStop(0, '#a7dedf')
+  bgGrad.addColorStop(0.4, '#e8f4f3')
+  bgGrad.addColorStop(1, '#f7f8fa')
+  ctx.fillStyle = bgGrad
+  ctx.fillRect(0, 0, width, height)
+
+  //绘制标题
+  ctx.fillStyle = '#2a4c4c'
+  ctx.font = 'bold 40px sans-serif'
+  ctx.fillText('轻盈小岛 · 蜕变报告', 50, 90)
+  ctx.fillStyle = '#5b8282'
+  ctx.font = '24px sans-serif'
+  const todayStr = new Date().toISOString().slice(0, 10)
+  ctx.fillText(`生成日期：${todayStr}`, 50, 135)
+
+  //绘制白色卡片
+  drawRoundRect(ctx, 40, 170, 670, 720, 32, '#ffffff')
+
+  //绘制头像、用户信息
+  try {
+    const avatarSrc = globalProfile.value.avatar || DEFAULT_AVATAR
+    const avatarImg = await loadImg(avatarSrc)
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(125, 255, 50, 0, Math.PI * 2)
+    ctx.clip()
+    ctx.drawImage(avatarImg, 75, 205, 100, 100)
+    ctx.restore()
+  } catch {
+    ctx.beginPath()
+    ctx.arc(125, 255, 50, 0, Math.PI * 2)
+    ctx.fillStyle = '#82d5bb'
+    ctx.fill()
+  }
+
+  //绘制用户名
+  const userName = globalProfile.value.name || '轻盈岛民'
+  ctx.fillStyle = '#333333'
+  ctx.font = 'bold 34px sans-serif'
+  ctx.fillText(userName, 200, 240)
+
+  const nameWidth = ctx.measureText(userName).width
+
+  //等级标签
+  const levelStr = accountLevel.value.split(' ')[0] + ' ' + (accountLevel.value.split(' ')[1] || '')
+  ctx.font = '18px sans-serif'
+  
+  const textWidth = ctx.measureText(levelStr).width
+  const badgeWidth = textWidth + 24 
+  
+  const badgeX = 200 + nameWidth + 12
+  const badgeY = 212
+  
+  drawRoundRect(ctx, badgeX, badgeY, badgeWidth, 30, 15, '#7bc63d')
+  ctx.fillStyle = '#ffffff'
+  ctx.fillText(levelStr, badgeX + 12, badgeY + 22)
+
+  //绘制个性签名
+  const signText = globalProfile.value.signature || '开启全新的轻盈之旅'
+  ctx.fillStyle = '#888888'
+  ctx.font = '22px sans-serif'
+  const displaySign = signText.length > 20 ? signText.slice(0, 19) + '...' : signText
+  ctx.fillText(displaySign, 200, 285)
+  
+  //分割线
+  ctx.strokeStyle = '#f0f2f5'
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(75, 340)
+  ctx.lineTo(675, 340)
+  ctx.stroke()
+
+  //计算各项核心指标
+  const unit = getUnitLabel()
+  const totalDays = userRecords.value.length
+  const lostKg = weightLostVal.value
+  const lostDisplay = formatWeight(Math.abs(lostKg))
+  const lostPrefix = lostKg >= 0 ? '累计减重' : '体重增加'
+
+  const currentWeightKg = totalDays > 0
+    ? Number(userRecords.value[0].weight)
+    : Number(globalProfile.value.initialWeight) || 0
+  const currentWeightDisplay = currentWeightKg ? `${formatWeight(currentWeightKg)} ${unit}` : '未记录'
+
+  //计算 BMI
+  const heightM = (Number(globalProfile.value.height) || 0) / 100
+  const bmiVal = heightM && currentWeightKg ? (currentWeightKg / (heightM * heightM)).toFixed(1) : '—'
+  let bmiTag = '待设置'
+  if (bmiVal !== '—') {
+    const b = Number(bmiVal)
+    bmiTag = b < 18.5 ? '偏瘦' : b < 24 ? '标准' : b < 28 ? '偏胖' : '肥胖'
+  }
+
+  //计算目标进度
+  const initW = Number(globalProfile.value.initialWeight) || 0
+  const goalW = Number(globalProfile.value.goalWeight) || 0
+  let progressStr = '未设目标'
+  if (initW && goalW && initW > goalW) {
+    const p = Math.max(0, Math.min(100, Math.floor(((initW - currentWeightKg) / (initW - goalW)) * 100)))
+    progressStr = `${p}%`
+  }
+
+  //已解锁徽章数
+  const unlockedCount = achievements.value.filter(a => a.unlocked).length
+
+  //绘制数据宫格
+  const cards = [
+    { title: '打卡次数', value: `${totalDays} 次`, sub: '坚持就是胜利', bg: '#fff9e6', color: '#d97706' },
+    { title: lostPrefix, value: `${lostDisplay} ${unit}`, sub: '每一次轻盈都算数', bg: '#ecfdf5', color: '#059669' },
+    { title: '当前体重', value: currentWeightDisplay, sub: `初始: ${initW ? formatWeight(initW) + unit : '—'}`, bg: '#f0f9ff', color: '#0284c7' },
+    { title: '身体指数 (BMI)', value: `${bmiVal}`, sub: `当前状态：${bmiTag}`, bg: '#fff1f2', color: '#e11d48' },
+    { title: '目标达成率', value: progressStr, sub: `目标: ${goalW ? formatWeight(goalW) + unit : '—'}`, bg: '#f5f3ff', color: '#7c3aed' },
+    { title: '解锁成就徽章', value: `${unlockedCount} / 6 枚`, sub: '小岛荣誉见证', bg: '#fef3c7', color: '#b45309' }
+  ]
+
+  cards.forEach((item, idx) => {
+    const col = idx % 2
+    const row = Math.floor(idx / 2)
+    const x = 75 + col * 310
+    const y = 375 + row * 165
+
+    drawRoundRect(ctx, x, y, 290, 145, 20, item.bg)
+
+    ctx.fillStyle = '#666666'
+    ctx.font = '22px sans-serif'
+    ctx.fillText(item.title, x + 24, y + 42)
+
+    ctx.fillStyle = item.color
+    ctx.font = 'bold 36px sans-serif'
+    ctx.fillText(item.value, x + 24, y + 92)
+
+    ctx.fillStyle = '#999999'
+    ctx.font = '18px sans-serif'
+    ctx.fillText(item.sub, x + 24, y + 125)
+  })
+
+  //底部寄语
+  ctx.fillStyle = '#99aab5'
+  ctx.font = '22px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillText('—— 慢慢来，也是一种进步 ——', width / 2, 950)
+  ctx.textAlign = 'left'
+
+  reportImgUrl.value = canvas.toDataURL('image/png')
+  showReportPopup.value = true
+}
+
+//分享或保存生成的图片报告
+const shareOrDownloadReport = async () => {
+  if (!reportImgUrl.value) return
+  const fileName = `island_report_${Date.now()}.png`
+
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const base64Data = reportImgUrl.value.split(',')[1]
+      const savedFile = await Filesystem.writeFile({
+        path: fileName,
+        data: base64Data,
+        directory: Directory.Cache
+      })
+      await Share.share({
+        title: '我的轻盈小岛报告',
+        text: '来看看我的蜕变记录吧！',
+        url: savedFile.uri
+      })
+    } else {
+      const a = document.createElement('a')
+      a.href = reportImgUrl.value
+      a.download = fileName
+      a.click()
+      showNotify('报告图片已下载！', 'success')
+    }
+  } catch (err) {
+    showNotify('分享已取消或未完成', 'primary')
+  }
+}
 </script>
 
 <style scoped>
@@ -561,5 +813,28 @@ watch(
 .ach-desc {
   font-size: 10px;
   color: #969799;
+}
+
+.report-modal-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.report-modal-title {
+  margin: 0 0 12px 0;
+  font-size: 17px;
+  color: #323233;
+}
+
+.report-preview-img {
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  margin-bottom: 16px;
+}
+
+.report-actions {
+  width: 100%;
 }
 </style>

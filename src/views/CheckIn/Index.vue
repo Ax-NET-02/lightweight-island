@@ -99,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted} from 'vue'
 import { showNotify } from '@/utils/notify'
 import { getRecords, addRecord, globalProfile, getUnitLabel, formatWeight, toKgWeight } from '@/utils/storage'
 import type { RecordItem } from '@/utils/storage'
@@ -115,12 +115,49 @@ const getTodayDate = () => {
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
-const formDate = ref(getTodayDate())
+
+const formDate = ref('')
+
+// 24小时日期缓存
+const syncFormDate = () => {
+  const DATE_CACHE_KEY = 'cached_checkin_date'
+  const TIME_CACHE_KEY = 'cached_checkin_date_time'
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000
+  const now = Date.now()
+  const realToday = getTodayDate()
+
+  const cachedDate = localStorage.getItem(DATE_CACHE_KEY)
+  const cachedTime = localStorage.getItem(TIME_CACHE_KEY)
+  if (
+    cachedDate &&
+    cachedTime &&
+    now - Number(cachedTime) < ONE_DAY_MS &&
+    cachedDate === realToday
+  ) {
+    formDate.value = cachedDate
+    return
+  }
+  formDate.value = realToday
+  localStorage.setItem(DATE_CACHE_KEY, realToday)
+  localStorage.setItem(TIME_CACHE_KEY, now.toString())
+}
+
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'visible') {
+    syncFormDate()
+  }
+}
 
 const records = ref<RecordItem[]>([])
 
 onMounted(async () => {
+  syncFormDate()
+  document.addEventListener('visibilitychange', handleVisibilityChange)
   records.value = await getRecords()
+})
+
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 
 // 计算今日最新体重
@@ -141,7 +178,7 @@ const totalChange = computed(() => {
   return '0.0'
 })
 
-// 2.1 计算 BMI 指数
+//计算 BMI
 const bmiInfo = computed(() => {
   const heightCm = Number(globalProfile.value.height)
   const currentWeightKg = records.value.length > 0
@@ -173,7 +210,7 @@ const bmiInfo = computed(() => {
   return { value: bmi.toFixed(1), label: '肥胖', color: '#ef4444', badgeClass: 'badge-red', desc: '慢慢来，健康最重要' }
 })
 
-// 2.2 计算相比 N 日前体重变化
+//计算相比 N 日前体重变化
 const recentDiffInfo = computed(() => {
   if (records.value.length < 2) {
     return {
@@ -408,7 +445,6 @@ const onSubmit = async (values: any) => {
 
 .sub-stat-card {
   background-color: #ffffff;
-  border: 1px solid rgba(130, 213, 187, 0.35);
 }
 
 .sub-stat-card small {
